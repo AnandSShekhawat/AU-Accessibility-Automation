@@ -68,11 +68,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
       - name: Install axe-core CLI and static server
         run: |
           npm install -g @axe-core/cli serve
@@ -82,21 +77,26 @@ jobs:
           serve . -l 3000 &
           sleep 5
 
-      - name: Run axe scan and generate JSON report
+      - name: Run axe scan and generate report
         run: |
-          axe http://localhost:3000/before.html \
-            --format json \
-            --save a11y-report.json || true
+          axe http://localhost:3000/before.html --verbose --save a11y-report.json || true
 
-      - name: Upload scan report artifact
+      - name: Format report into markdown
+        run: |
+          echo "## Accessibility Scan Results" > a11y-report.md
+          echo "::warning file=before.html::Detected accessibility violations. Open report attached." >> a11y-report.md
+
+      - name: Upload scan report as artifact
         uses: actions/upload-artifact@v4
         with:
           name: a11y-scan-report
           path: a11y-report.json
 
-      - name: Create GitHub issues for violations
-        uses: dequelabs/axe-github-action@v1
+      - name: Create issue with report summary
+        uses: peter-evans/create-issue-from-file@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          results-path: a11y-report.json
-          labels: a11y-scan, automated-fix, copilot-accessibility
+          title: "Accessibility Violations Found"
+          content-filepath: a11y-report.md
+          labels: |
+            a11y-scan
+            copilot:accessibility
