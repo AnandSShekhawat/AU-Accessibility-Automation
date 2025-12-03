@@ -24,7 +24,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm install -g @axe-core/cli serve jq
+          npm install -g @axe-core/cli serve
 
       - name: Serve site
         run: |
@@ -56,14 +56,14 @@ jobs:
 
             body="### Accessibility Issue: ${rule}\n\n"
             body+="**Description:**\n${desc}\n\n"
-            body+="**Impacted HTML Example:**\n\`\`\`html\n${snippet}\n\`\`\`\n\n"
-            body+="🔗 WCAG Ref: ${help}\n"
-            body+="📌 Auto-generated — please fix and open a PR\n"
+            body+="**Example element:**\n\`\`\`html\n${snippet}\n\`\`\`\n\n"
+            body+="🔗 WCAG Rule: ${help}\n"
+            body+="🤖 Auto-generated — Copilot can help fix this!\n"
 
             printf "%b\n" "$body" > issue.md
 
             gh issue create \
-              --title "Fix: ${rule} accessibility violation" \
+              --title "Fix: ${rule} violation" \
               --body-file issue.md \
               --label "a11y-scan" \
               --label "copilot:accessibility" || echo "Failed to create issue for ${rule}"
