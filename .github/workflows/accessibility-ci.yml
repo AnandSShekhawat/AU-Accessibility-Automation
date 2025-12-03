@@ -32,27 +32,26 @@ jobs:
         run: |
           echo "Running accessibility scan..."
           axe http://localhost:3000/before.html \
-            --no-summary \
-            --format json \
             --save a11y-report.json || echo "Scan issues detected"
           echo "Scan completed"
-          jq '.[].id' a11y-report.json
+          jq '.violations | length' a11y-report.json
 
       - name: Create GitHub issues for each violation
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          count=$(jq 'length' a11y-report.json)
+          count=$(jq '.violations | length' a11y-report.json)
           echo "Found $count accessibility violations"
+
           if [ "$count" -eq 0 ]; then
             echo "No accessibility issues found."
             exit 0
           fi
 
-          jq -c '.[]' a11y-report.json | while read -r violation; do
+          jq -c '.violations[]' a11y-report.json | while read -r violation; do
             rule=$(echo "$violation" | jq -r '.id')
             desc=$(echo "$violation" | jq -r '.description')
-            help=$(echo "$violation" | jq -r '.helpUrl')
+            help=$(echo "$violation" | jq -r '.helpUrl // "No documentation"')
             snippet=$(echo "$violation" | jq -r '.nodes[0].html // "No snippet available"' | sed 's/`/"/g')
 
             body="### Accessibility Issue: ${rule}\n\n"
