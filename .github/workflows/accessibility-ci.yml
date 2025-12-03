@@ -17,7 +17,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install axe-core CLI and static server
+      - name: Install axe-core CLI and dependencies
         run: |
           npm install -g @axe-core/cli serve
           sudo apt-get update
@@ -31,30 +31,27 @@ jobs:
       - name: Run accessibility scan
         run: |
           echo "Running accessibility scan..."
-          if ! axe http://localhost:3000/before.html \
-            --save a11y-report.json; then
-            echo "⚠️ Axe scan failed — creating fallback report"
-            echo '[]' > a11y-report.json
-          fi
+          axe http://localhost:3000/before.html --save a11y-report.json || echo "Scan issues detected"
           echo "Scan completed"
-          jq length a11y-report.json
+          ls -l a11y-report.json
+          jq '.runs[0].axe[0].violations | length' a11y-report.json
 
       - name: Create GitHub issues for each violation
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          count=$(jq 'length' a11y-report.json)
+          count=$(jq '.runs[0].axe[0].violations | length' a11y-report.json)
           echo "Found $count accessibility violations"
           if [ "$count" -eq 0 ]; then
             echo "No accessibility issues found."
             exit 0
           fi
 
-          jq -c '.[]' a11y-report.json | while read -r violation; do
+          jq -c '.runs[0].axe[0].violations[]' a11y-report.json | while read -r violation; do
             rule=$(echo "$violation" | jq -r '.id')
             desc=$(echo "$violation" | jq -r '.description')
             help=$(echo "$violation" | jq -r '.helpUrl')
-            snippet=$(echo "$violation" | jq -r '.nodes[0].html' | sed 's/`/"/g')
+            snippet=$(echo "$violation" | jq -r '.nodes[0].html // "No snippet available"' | sed 's/`/"/g')
 
             body="### Accessibility Issue: ${rule}\n\n"
             body+="**Description:**\n${desc}\n\n"
@@ -68,5 +65,6 @@ jobs:
               --title "Fix: ${rule} violation" \
               --body-file issue.md \
               --label "a11y-scan" \
-              --label "copilot:accessibility" || echo "Failed to create issue for ${rule}"
+              --label "copilot:accessibility" \
+              || echo "Failed to create issue for ${rule}"
           done
