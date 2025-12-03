@@ -88,16 +88,15 @@ jobs:
             --format json \
             --save a11y-report.json || true
 
-      - name: Upload scan report as artifact
+      - name: Upload scan report artifact
         uses: actions/upload-artifact@v4
         with:
           name: a11y-scan-report
           path: a11y-report.json
 
-      - name: Create issues for each accessibility violation
-        uses: DequeSystems/axe-github-action@v2
+      - name: Create GitHub issues for violations
+        uses: dequelabs/axe-github-action@v1
         with:
-          axe-results-path: a11y-report.json
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          labels: a11y-issue, automated-scan, copilot-accessibility
-          fail-on-error: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+          results-path: a11y-report.json
+          labels: a11y-scan, automated-fix, copilot-accessibility
