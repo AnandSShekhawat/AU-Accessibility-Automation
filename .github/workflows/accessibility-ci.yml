@@ -46,33 +46,33 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          count=$(jq 'length' a11y-report.json)
+          count=$(jq '.violations | length' a11y-report.json)
           echo "Found $count accessibility violations"
           if [ "$count" -eq 0 ]; then
             echo "No accessibility issues found."
             exit 0
           fi
 
-          jq -c '.[]' a11y-report.json | while read -r violation; do
+          jq -c '.violations[]' a11y-report.json | while read -r violation; do
             rule=$(echo "$violation" | jq -r '.id // "Unknown rule"')
             desc=$(echo "$violation" | jq -r '.description // "No description available"')
             help=$(echo "$violation" | jq -r '.helpUrl // "No help URL"')
             snippet=$(echo "$violation" | jq -r '.nodes[0].html // "No snippet available"' | sed 's/`/"/g')
 
+            title="Fix: ${rule} violation"
             body="### Accessibility Issue Detected 🚨\n\n"
             body+="**Rule:** \`${rule}\`\n\n"
             body+="**Description:**\n${desc}\n\n"
-            body+="**Example Problematic Element:**\n\`\`\`html\n${snippet}\n\`\`\`\n\n"
-            body+="🔗 **WCAG Guidance:** ${help}\n\n"
-            body+="🤖 Auto-generated — Ask Copilot to fix using:\n"
-            body+="\`@github-copilot please fix this\`\n"
+            body+="**Example Element:**\n\`\`\`html\n${snippet}\n\`\`\`\n\n"
+            body+="🔗 WCAG Rule: ${help}\n"
+            body+="🤖 Auto-generated — Ask Copilot to fix using:\n\`@github-copilot please fix this\`\n"
 
             printf "%b\n" "$body" > issue.md
 
             gh issue create \
-              --title "Fix: ${rule} violation" \
+              --title "$title" \
               --body-file issue.md \
               --label "a11y-scan" \
               --label "copilot:accessibility" \
-              || echo "❌ Failed to create issue for ${rule}"
+              || echo "Failed to create issue for ${rule}"
           done
