@@ -33,21 +33,20 @@ jobs:
           echo "Running accessibility scan..."
           axe http://localhost:3000/before.html --save a11y-report.json || echo "Scan issues detected"
           echo "Scan completed"
-          ls -l a11y-report.json
-          jq '.runs[0].axe[0].violations | length' a11y-report.json
+          jq 'length' a11y-report.json
 
       - name: Create GitHub issues for each violation
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          count=$(jq '.runs[0].axe[0].violations | length' a11y-report.json)
+          count=$(jq 'length' a11y-report.json)
           echo "Found $count accessibility violations"
           if [ "$count" -eq 0 ]; then
             echo "No accessibility issues found."
             exit 0
           fi
 
-          jq -c '.runs[0].axe[0].violations[]' a11y-report.json | while read -r violation; do
+          jq -c '.[]' a11y-report.json | while read -r violation; do
             rule=$(echo "$violation" | jq -r '.id')
             desc=$(echo "$violation" | jq -r '.description')
             help=$(echo "$violation" | jq -r '.helpUrl')
